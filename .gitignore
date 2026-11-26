@@ -1,0 +1,15 @@
+/build/
+/dist/
+/dist-*/
+/imgui.ini
+/.vs/
+*.user
+*.pdb
+*.ilk
+*.obj
+*.log
+
+# Generated binaries
+*.exe
+*.dll
+
