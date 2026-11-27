@@ -1,7 +1,7 @@
 #pragma once
 struct ModuleSettings {
     int leftMin=10, leftMax=14, rightMin=1, rightMax=1;
-    bool inventory=true, breakBlocks=true;
+    bool inventory=true, breakBlocks=true, onlyWhileHolding=true;
     bool rightGuardAvailable=false;
     bool arrayList=false, notifications=true, watermark=false;
     bool arrayTags=true, arrayModern=true, arrayShadow=true;
@@ -13,3 +13,4 @@ struct ModuleSettings {
     char watermarkName[64]="Boull";
 };
 inline ModuleSettings moduleSettings;
+

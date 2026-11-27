@@ -18,6 +18,14 @@ int main(){
     const auto exiting=NotificationAnimation::Evaluate(noteStart+2900ms,noteStart,noteStart+3s);
     const auto finished=NotificationAnimation::Evaluate(noteStart+3s,noteStart,noteStart+3s);
     if(atStart.opacity!=0||atStart.offsetX<=0||entering.opacity<=0||entering.opacity>=1||visible.opacity!=1||visible.offsetX!=0||exiting.opacity<=0||exiting.opacity>=1||finished.opacity!=0){std::cerr<<"Notification animation timing failed\n";return 10;}
+    if(LeftClickTriggered(false,true)||!LeftClickTriggered(true,true)||!LeftClickTriggered(false,false)){std::cerr<<"Hold mode failed\n";return 11;}
+    leftEnabled=false;capturingBind=false;mouseBindWasDown=false;
+    UpdateMouseBind(true,true);UpdateMouseBind(true,true);if(!leftEnabled){std::cerr<<"Mouse bind repeated or failed\n";return 12;}
+    UpdateMouseBind(false,true);UpdateMouseBind(true,false);if(!leftEnabled){std::cerr<<"Mouse bind reacted outside game\n";return 13;}
+    UpdateMouseBind(false,true);capturingBind=true;UpdateMouseBind(true,true);capturingBind=false;if(!leftEnabled)return 14;
+    UpdateMouseBind(false,true);UpdateMouseBind(true,true);if(leftEnabled)return 15;
+    capturingBind=true;WindowProc(nullptr,WM_XBUTTONDOWN,MAKEWPARAM(0,XBUTTON1),0);if(capturingBind||clickerKey!=VK_XBUTTON1||bindLabel!="Mouse 4")return 16;
+    capturingBind=true;WindowProc(nullptr,WM_XBUTTONDOWN,MAKEWPARAM(0,XBUTTON2),0);if(capturingBind||clickerKey!=VK_XBUTTON2||bindLabel!="Mouse 5")return 17;
     RightClickGuard guard;const auto start=RightClickGuard::Clock::time_point{}+1s;const auto period=100ms;
     if(guard.Update(start,true,true,true,ItemUseState::Idle,period)!=RightClickAction::None||
        guard.Update(start+100ms,true,true,true,ItemUseState::Idle,period)!=RightClickAction::Down||
@@ -62,3 +70,4 @@ int main(){
     if(!ok){std::cerr<<"Unexpected mouse message sequence\n";return 3;}
     std::cout<<"PASS: isolated left and right mouse message sequence\n";return 0;
 }
+

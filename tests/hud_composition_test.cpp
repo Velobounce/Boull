@@ -41,7 +41,7 @@ int main(){
  for(int i=0;i<25;++i)menuFrame(false);
  const auto hideFrame=[&](bool down){
   ImGui::SetCurrentContext(menuImGuiContext);ImGui_ImplDX11_NewFrame();auto& io=ImGui::GetIO();io.DisplaySize=ImVec2(820,540);io.DeltaTime=1.0f/60;io.ConfigInputTrickleEventQueue=false;
-  io.AddMousePosEvent(560,460);io.AddMouseButtonEvent(0,down);ImGui::NewFrame();
+  io.AddMousePosEvent(560,485);io.AddMouseButtonEvent(0,down);ImGui::NewFrame();
   AnimeUI::RenderAutoClickMenu(left,right,delay,jump,true,true,true,cps,capture,"F6","",requestBind,requestUnload);ImGui::Render();
  };
  moduleSettings.hideLeftFromArray=false;hideFrame(false);hideFrame(true);hideFrame(false);
@@ -51,6 +51,8 @@ int main(){
   io.AddMousePosEvent(x,y);io.AddMouseButtonEvent(0,l);io.AddMouseButtonEvent(1,r);ImGui::NewFrame();
   AnimeUI::RenderAutoClickMenu(left,right,delay,jump,true,true,true,cps,capture,"F6","",requestBind,requestUnload);ImGui::Render();
  };
+ moduleSettings.onlyWhileHolding=true;uiFrame(560,375,false,false);uiFrame(560,375,true,false);uiFrame(560,375,false,false);
+ if(moduleSettings.onlyWhileHolding){std::cerr<<"Hold-mode setting did not toggle\n";return 32;}
  uiFrame(70,145,false,false);uiFrame(70,145,true,false);uiFrame(70,145,false,false);
  uiFrame(440,180,false,true);uiFrame(440,180,false,false);
  if(AnimeUI::g_selectedModule!=5){std::cerr<<"Visuals tab or ArrayList options failed\n";return 15;}
@@ -123,5 +125,7 @@ int main(){
  target.Reset();compositionVisual.Reset();compositionTarget.Reset();composition.Reset();swapChain.Reset();context.Reset();device.Reset();DestroyWindow(host);UnregisterClassW(wc.lpszClassName,self);
  std::cout<<"PASS: HUD composition and menu clicks with HUD frames\n";return 0;
 }
+
+
 
 

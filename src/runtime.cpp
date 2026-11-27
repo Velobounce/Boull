@@ -33,7 +33,7 @@ bool hudReady=false;
 ImGuiContext* menuImGuiContext{};
 ImGuiContext* hudImGuiContext{};
 bool capturingBind=false, hotkeyRegistered=false, leftEnabled=false, rightEnabled=false, delayEnabled=false, jumpEnabled=false, unloadRequested=false;
-bool mapped=false; int cps=8; UINT clickerKey=VK_F6;
+bool mapped=false; int cps=8; UINT clickerKey=VK_F6; bool mouseBindWasDown=false;
 std::string bindLabel="F6", statusText="AutoClicker keybind";
 Microsoft::WRL::ComPtr<ID3D11Device> device;
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> logoTexture;
@@ -161,20 +161,25 @@ bool IsWorldReady(){
  if(s)env->DeleteLocalRef(s);if(p)env->DeleteLocalRef(p);if(w)env->DeleteLocalRef(w);env->DeleteLocalRef(mc);return ready;
 }
 BOOL CALLBACK FindGame(HWND window,LPARAM){if(!IsWindowVisible(window))return TRUE;DWORD pid=0;GetWindowThreadProcessId(window,&pid);if(pid!=GetCurrentProcessId())return TRUE;wchar_t cls[128]{};if(GetClassNameW(window,cls,128)&&(wcsstr(cls,L"LWJGL")||wcsstr(cls,L"GLFW"))){game=window;return FALSE;}return TRUE;}
+void UpdateMouseBind(bool down,bool focused){if(down&&!mouseBindWasDown&&!capturingBind&&focused)leftEnabled=!leftEnabled;mouseBindWasDown=down;}
+constexpr bool LeftClickTriggered(bool held,bool onlyWhileHolding){return held||!onlyWhileHolding;}
 void Tick(){const auto now=std::chrono::steady_clock::now();
  if(!mapped&&env&&now>=nextMappingAttempt){mapped=FindMinecraft();nextMappingAttempt=now+std::chrono::seconds(5);}
  if(mapped&&now>=nextMappingAttempt){RefreshJumpMapping();RefreshUseMapping();nextMappingAttempt=now+std::chrono::seconds(5);}
  if(moduleSettings.watermark&&debugFpsField&&env&&minecraft&&now>=nextFpsCheck){const jint value=env->GetStaticIntField(minecraft,debugFpsField);if(!ClearException())gameFps=value>=0&&value<10000?value:-1;nextFpsCheck=now+std::chrono::seconds(1);}
  if(!game||!IsWindow(game)){game=nullptr;EnumWindows(FindGame,0);}
+ const bool sideBind=clickerKey==VK_XBUTTON1||clickerKey==VK_XBUTTON2;
+ if(sideBind)UpdateMouseBind((GetAsyncKeyState(static_cast<int>(clickerKey))&0x8000)!=0,game&&GetForegroundWindow()==game);
  if(!game||GetForegroundWindow()!=game){nextLeft={};rightClickGuard.Reset();cpsInitialized=false;cachedWorldReady=false;cachedItemUse=ItemUseState::Unknown;nextJavaCheck={};nextItemUseCheck={};return;}
  const bool heldLeft=(GetAsyncKeyState(VK_LBUTTON)&0x8000)!=0;
  const bool heldRight=(GetAsyncKeyState(VK_RBUTTON)&0x8000)!=0;
- const bool needWorld=(leftEnabled&&heldLeft&&moduleSettings.inventory)||(rightEnabled&&heldRight);
+ const bool leftTriggered=LeftClickTriggered(heldLeft,moduleSettings.onlyWhileHolding);
+ const bool needWorld=(leftEnabled&&leftTriggered&&moduleSettings.inventory)||(rightEnabled&&heldRight);
  if(now>=nextJavaCheck){cachedWorldReady=IsWorldReady();nextJavaCheck=now+std::chrono::milliseconds(50);if(delayEnabled)ResetDelay();if(jumpEnabled)ResetJumpDelay();}
  const bool inWorld=!needWorld||cachedWorldReady;
- if(leftEnabled&&heldLeft&&(!moduleSettings.inventory||inWorld)){
+ if(leftEnabled&&leftTriggered&&(!moduleSettings.inventory||inWorld)){
   if(nextLeft==std::chrono::steady_clock::time_point{})nextLeft=now+ClickTiming::Next<std::chrono::steady_clock>(moduleSettings.leftMin,moduleSettings.leftMax,clickRng,smoothCps,targetCps,targetClicks,cpsInitialized);
-  if(now>=nextLeft){Click(false,!moduleSettings.breakBlocks);nextLeft=now+ClickTiming::Next<std::chrono::steady_clock>(moduleSettings.leftMin,moduleSettings.leftMax,clickRng,smoothCps,targetCps,targetClicks,cpsInitialized);}
+  if(now>=nextLeft){Click(false,!moduleSettings.breakBlocks||!heldLeft);nextLeft=now+ClickTiming::Next<std::chrono::steady_clock>(moduleSettings.leftMin,moduleSettings.leftMax,clickRng,smoothCps,targetCps,targetClicks,cpsInitialized);}
  }else{nextLeft={};cpsInitialized=false;}
  if(rightEnabled&&heldRight&&inWorld){
   if(now>=nextItemUseCheck){cachedItemUse=ReadItemUseState();nextItemUseCheck=now+std::chrono::milliseconds(10);}
@@ -185,7 +190,9 @@ void Tick(){const auto now=std::chrono::steady_clock::now();
 }
 void RegisterClickerKey(HWND w,UINT key){
     if(hotkeyRegistered)UnregisterHotKey(w,1);hotkeyRegistered=false;
+    if(key==VK_XBUTTON1||key==VK_XBUTTON2){clickerKey=key;mouseBindWasDown=true;bindLabel=key==VK_XBUTTON1?"Mouse 4":"Mouse 5";statusText="AutoClicker keybind";return;}
     if(!RegisterHotKey(w,1,MOD_NOREPEAT,key)){
+        if(clickerKey==VK_XBUTTON1||clickerKey==VK_XBUTTON2){statusText="Key unavailable. Previous keybind retained.";return;}
         hotkeyRegistered=RegisterHotKey(w,1,MOD_NOREPEAT,clickerKey)!=FALSE;
         statusText=hotkeyRegistered?"Key unavailable. Previous keybind retained.":"Key unavailable. Choose another.";
         return;
@@ -198,6 +205,7 @@ void RegisterClickerKey(HWND w,UINT key){
 bool CreateTarget(){Microsoft::WRL::ComPtr<ID3D11Texture2D> buffer;if(FAILED(swapChain->GetBuffer(0,IID_PPV_ARGS(buffer.GetAddressOf()))))return false;return SUCCEEDED(device->CreateRenderTargetView(buffer.Get(),nullptr,target.ReleaseAndGetAddressOf()));}
 LRESULT CALLBACK WindowProc(HWND w,UINT msg,WPARAM wp,LPARAM lp){
  if(msg==WM_NCHITTEST){POINT pt{GET_X_LPARAM(lp),GET_Y_LPARAM(lp)};if(ScreenToClient(w,&pt)){const ImVec2 p=AnimeUI::UnprojectTiltMouse(ImVec2(static_cast<float>(pt.x),static_cast<float>(pt.y)));if(p.x>=0&&p.x<820&&p.y>=0&&p.y<58)return HTCAPTION;}return HTCLIENT;}
+ if(msg==WM_XBUTTONDOWN&&capturingBind){capturingBind=false;RegisterClickerKey(w,GET_XBUTTON_WPARAM(wp)==XBUTTON1?VK_XBUTTON1:VK_XBUTTON2);return TRUE;}
  if(msg==WM_KEYDOWN&&capturingBind){capturingBind=false;RegisterClickerKey(w,wp==VK_ESCAPE?clickerKey:static_cast<UINT>(wp));return 0;}
  if(msg==WM_HOTKEY&&wp==1){leftEnabled=!leftEnabled;return 0;}
  if(ImGui::GetCurrentContext()&&ImGui_ImplWin32_WndProcHandler(w,msg,wp,lp))return 1;
@@ -338,7 +346,7 @@ void RenderPanel(){
  AnimeUI::RenderAutoClickMenu(leftEnabled,rightEnabled,delayEnabled,jumpEnabled,mapped,jumpTicks!=nullptr,hudReady,cps,capturingBind,bindLabel,statusText,requestBind,requestUnload);
  if(!OfflineProfiles::requested.empty()){auto name=std::move(OfflineProfiles::requested);OfflineProfiles::requested.clear();if(ApplyOfflineProfile(vm,env,minecraft,instance,world,name,OfflineProfiles::status)){OfflineProfiles::current=name;NotifyHud("Profile "+name+" applied");}}
  if(OfflineProfiles::restoreRequested){OfflineProfiles::restoreRequested=false;if(RestoreOriginalSession(env,minecraft,instance,world,OfflineProfiles::status)){OfflineProfiles::current.clear();NotifyHud("Original profile restored");}}
- if(requestBind){capturingBind=true;if(hotkeyRegistered){UnregisterHotKey(panel,1);hotkeyRegistered=false;}statusText="Press a key; Esc cancels.";SetFocus(panel);}
+ if(requestBind){capturingBind=true;if(hotkeyRegistered){UnregisterHotKey(panel,1);hotkeyRegistered=false;}statusText="Press a key or Mouse 4/5; Esc cancels.";SetFocus(panel);}
  if(requestUnload){leftEnabled=false;rightEnabled=false;delayEnabled=false;jumpEnabled=false;unloadRequested=true;}
 }
 DWORD WINAPI Run(void*){
@@ -377,6 +385,9 @@ DWORD WINAPI Run(void*){
 }
 }
 BOOL APIENTRY DllMain(HMODULE module,DWORD reason,LPVOID){if(reason==DLL_PROCESS_ATTACH){self=module;DisableThreadLibraryCalls(module);HANDLE thread=CreateThread(nullptr,0,Run,nullptr,0,nullptr);if(!thread)return FALSE;CloseHandle(thread);}return TRUE;}
+
+
+
 
 
 

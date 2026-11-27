@@ -21,7 +21,7 @@ int wmain(int argc,wchar_t** argv){
  wchar_t tempDir[MAX_PATH]{},tempFile[MAX_PATH]{};
  if(!GetTempPathW(MAX_PATH,tempDir)||!GetTempFileNameW(tempDir,L"BUT",0,tempFile))return 8;
  const auto executable=SelfPath().parent_path()/L"Boull.exe";
- const bool binaryOk=CopyFileW(executable.c_str(),tempFile,FALSE)&&IsPortableExecutable(tempFile)&&BinaryVersion(tempFile)==a;
+ const bool binaryOk=CopyFileW(executable.c_str(),tempFile,FALSE)&&IsPortableExecutable(tempFile)&&BinaryVersion(tempFile)==UpdatePolicy::ParseVersion(BOULL_VERSION);
  DeleteFileW(tempFile);if(!binaryOk){std::cerr<<"Executable validation rejected a temporary download\n";return 9;}
  const auto directory=SelfPath().parent_path()/L"update fixture spaces";std::error_code ec;std::filesystem::create_directories(directory,ec);if(ec)return 15;
  const auto target=directory/L"Boull.exe",marker=directory/L"test-update-complete";
@@ -39,4 +39,5 @@ int wmain(int argc,wchar_t** argv){
  std::cout<<"PASS: isolated executable replacement and relaunch\n";
  std::cout<<"PASS: release version, URL, digest and SHA-256 validation\n";return 0;
 }
+
 

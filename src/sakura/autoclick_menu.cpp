@@ -116,10 +116,11 @@ void RenderAutoClickMenu(bool& left, bool& right, bool& delay, bool& jump, bool 
             if(displayedModule==1){
                 ImGui::SetCursorPos(ImVec2(526,274));ToggleRow("Disable in inventory",&moduleSettings.inventory,260);
                 ImGui::SetCursorPos(ImVec2(526,316));ToggleRow("Break blocks",&moduleSettings.breakBlocks,260);
-                ImGui::SetCursorPos(ImVec2(526,368));const std::string label=capture?"Press a key...":"Bind: "+bind;
+                ImGui::SetCursorPos(ImVec2(526,358));ToggleRow("Only while holding",&moduleSettings.onlyWhileHolding,260);
+                ImGui::SetCursorPos(ImVec2(526,400));const std::string label=capture?"Press a key or mouse button...":"Bind: "+bind;
                 if(PillButton(label.c_str(),ImVec2(250,38),true))requestBind=true;
-                dl->AddText(font,13,p+ImVec2(526,415),Pal::TextDim,status.c_str());
-                ImGui::SetCursorPos(ImVec2(526,442));ToggleRow("Hide from ArrayList",&moduleSettings.hideLeftFromArray,260);
+                dl->AddText(font,13,p+ImVec2(526,444),Pal::TextDim,status.c_str());
+                ImGui::SetCursorPos(ImVec2(526,468));ToggleRow("Hide from ArrayList",&moduleSettings.hideLeftFromArray,260);
             }else{
                 ImGui::SetCursorPos(ImVec2(526,274));ToggleRow("Hide from ArrayList",&moduleSettings.hideRightFromArray,260);
                 dl->AddText(font,13,p+ImVec2(526,326),Pal::TextDim,"Item protection: up to about 14 CPS.");
@@ -209,6 +210,7 @@ void RenderAutoClickMenu(bool& left, bool& right, bool& delay, bool& jump, bool 
     Apply3DTilt(dl,win);
 }
 }
+
 
 
 

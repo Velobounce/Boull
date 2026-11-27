@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(AutoClickV VERSION 0.2.0 LANGUAGES CXX RC)
+project(AutoClickV VERSION 0.2.1 LANGUAGES CXX RC)
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "AutoClickV requer Windows x64")
 endif()
@@ -81,6 +81,7 @@ if(AUTOCLICKV_BUILD_TESTS)
     target_compile_options(AutoClickVClickTest PRIVATE /W4 /permissive- /EHsc /utf-8)
   endif()
 endif()
+
 
 
 
